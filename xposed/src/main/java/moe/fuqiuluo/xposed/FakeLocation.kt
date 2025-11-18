@@ -9,6 +9,7 @@ import moe.fuqiuluo.xposed.hooks.LocationManagerHook
 import moe.fuqiuluo.xposed.hooks.LocationServiceHook
 import moe.fuqiuluo.xposed.hooks.fused.AndroidFusedLocationProviderHook
 import moe.fuqiuluo.xposed.hooks.fused.ThirdPartyLocationHook
+import moe.fuqiuluo.xposed.hooks.gms.GmsFusedLocationHook
 import moe.fuqiuluo.xposed.hooks.oplus.OplusLocationHook
 import moe.fuqiuluo.xposed.hooks.telephony.miui.MiuiTelephonyManagerHook
 import moe.fuqiuluo.xposed.hooks.sensor.SystemSensorManagerHook
@@ -47,7 +48,16 @@ class FakeLocation: IXposedHookLoadPackage, IXposedHookZygoteInit {
      * @throws Throwable Everything the callback throws is caught and logged.
      */
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam?) {
-        if (lpparam?.packageName != "android" && lpparam?.packageName != "com.android.phone") {
+        val targetPackages = setOf(
+            "android",
+            "com.android.phone",
+            "com.android.location.fused",
+            "com.xiaomi.location.fused",
+            "com.oplus.location",
+            "com.google.android.gms" // Google Play Services
+        )
+
+        if (lpparam?.packageName !in targetPackages) {
             return
         }
 
@@ -98,6 +108,11 @@ class FakeLocation: IXposedHookLoadPackage, IXposedHookZygoteInit {
             }
             "com.oplus.location" -> {
                 OplusLocationHook(lpparam.classLoader)
+            }
+            "com.google.android.gms" -> {
+                // Google Play Services FusedLocationProviderClient
+                Logger.info("Found com.google.android.gms")
+                GmsFusedLocationHook(lpparam.classLoader)
             }
         }
     }

@@ -41,7 +41,8 @@ abstract class BaseDivineService {
             return false
         }
 
-        if (!locationManager.isProviderEnabled("portal")) {
+        // 使用 "passive" 作为隐蔽的 provider 名称
+        if (!locationManager.isProviderEnabled("passive")) {
             if (retryCount > 10) {
                 return false
             }
@@ -51,7 +52,7 @@ abstract class BaseDivineService {
 
         var randomKey = ""
         val rely = Bundle()
-        if(locationManager.sendExtraCommand("portal", "exchange_key", rely)) {
+        if(locationManager.sendExtraCommand("passive", "exchange_key", rely)) {
             rely.getString("key")?.let {
                 randomKey = it
             }
@@ -84,7 +85,7 @@ abstract class BaseDivineService {
             }
         })
         rely.putString("command_id", "set_proxy")
-        if (!locationManager.sendExtraCommand("portal", randomKey, rely)) {
+        if (!locationManager.sendExtraCommand("passive", randomKey, rely)) {
             Logger.error("Failed to init service proxy in $from")
             return false
         }
@@ -97,7 +98,7 @@ abstract class BaseDivineService {
     private fun syncConfig(locationManager: LocationManager, randomKey: String) {
         val rely = Bundle()
         rely.putString("command_id", "sync_config")
-        if(locationManager.sendExtraCommand("portal", randomKey, rely)) {
+        if(locationManager.sendExtraCommand("passive", randomKey, rely)) {
             FakeLoc.enable = rely.getBoolean("enable", FakeLoc.enable)
             FakeLoc.latitude = rely.getDouble("latitude", FakeLoc.latitude)
             FakeLoc.longitude = rely.getDouble("longitude", FakeLoc.longitude)
@@ -118,7 +119,6 @@ abstract class BaseDivineService {
             FakeLoc.disableFusedLocation = rely.getBoolean("disable_fused_location", FakeLoc.disableFusedLocation)
             FakeLoc.enableAGPS = rely.getBoolean("enable_agps", FakeLoc.enableAGPS)
             FakeLoc.enableNMEA = rely.getBoolean("enable_nmea", FakeLoc.enableNMEA)
-            FakeLoc.hideMock = rely.getBoolean("hide_mock", FakeLoc.hideMock)
             FakeLoc.hookWifi = rely.getBoolean("hook_wifi", FakeLoc.hookWifi)
             FakeLoc.needDowngradeToCdma = rely.getBoolean("need_downgrade_to_2g", FakeLoc.needDowngradeToCdma)
             Logger.debug("Synced config for DivineService")

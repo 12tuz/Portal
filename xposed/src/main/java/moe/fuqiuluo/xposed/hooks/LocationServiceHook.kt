@@ -35,7 +35,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.random.Random
 import kotlin.uuid.ExperimentalUuidApi
 
-private const val MAX_SATELLITES = 35 // 北斗系统实际可见卫星数上限
+private const val MAX_SATELLITES = 35 // 多星座可见卫星数上限
 
 // 载噪比范围，考虑不同轨道类型
 private const val GEO_MIN_CN0 = 30.0f  // GEO卫星信号较强
@@ -45,70 +45,55 @@ private const val IGSO_MAX_CN0 = 42.0f
 private const val MEO_MIN_CN0 = 20.0f  // MEO卫星信号相对较弱
 private const val MEO_MAX_CN0 = 40.0f
 
+// GPS 频率
+private const val GPS_L1_FREQ = 1575.42f // MHz
+private const val GPS_L2_FREQ = 1227.60f
+private const val GPS_L5_FREQ = 1176.45f
+
+// GLONASS 频率
+private const val GLONASS_G1_FREQ = 1602.0f
+private const val GLONASS_G2_FREQ = 1246.0f
+
+// Galileo 频率
+private const val GALILEO_E1_FREQ = 1575.42f
+private const val GALILEO_E5A_FREQ = 1176.45f
+
 // 北斗频率
 private const val BDS_B1I_FREQ = 1561.098f // MHz
 private const val BDS_B2I_FREQ = 1207.140f
 private const val BDS_B3I_FREQ = 1268.520f
 
-private val satelliteList = listOf(
-    BDSSatellite(1, OrbitType.GEO),
-    BDSSatellite(2, OrbitType.GEO),
-    BDSSatellite(3, OrbitType.GEO),
-    BDSSatellite(4, OrbitType.GEO),
-    BDSSatellite(5, OrbitType.GEO),
-    BDSSatellite(6, OrbitType.IGSO),
-    BDSSatellite(7, OrbitType.IGSO),
-    BDSSatellite(8, OrbitType.IGSO),
-    BDSSatellite(9, OrbitType.IGSO),
-    BDSSatellite(10, OrbitType.IGSO),
-    BDSSatellite(11, OrbitType.MEO),
-    BDSSatellite(12, OrbitType.MEO),
-    BDSSatellite(13, OrbitType.IGSO),
-    BDSSatellite(14, OrbitType.MEO),
-    BDSSatellite(16, OrbitType.IGSO),
-    BDSSatellite(19, OrbitType.MEO),
-    BDSSatellite(20, OrbitType.MEO),
-    BDSSatellite(21, OrbitType.MEO),
-    BDSSatellite(22, OrbitType.MEO),
-    BDSSatellite(23, OrbitType.MEO),
-    BDSSatellite(24, OrbitType.MEO),
-    BDSSatellite(25, OrbitType.MEO),
-    BDSSatellite(26, OrbitType.MEO),
-    BDSSatellite(27, OrbitType.MEO),
-    BDSSatellite(28, OrbitType.MEO),
-    BDSSatellite(29, OrbitType.MEO),
-    BDSSatellite(30, OrbitType.MEO),
-    BDSSatellite(31, OrbitType.IGSO),
-    BDSSatellite(32, OrbitType.MEO),
-    BDSSatellite(33, OrbitType.MEO),
-    BDSSatellite(34, OrbitType.MEO),
-    BDSSatellite(35, OrbitType.MEO),
-    BDSSatellite(36, OrbitType.MEO),
-    BDSSatellite(37, OrbitType.MEO),
-    BDSSatellite(38, OrbitType.IGSO),
-    BDSSatellite(39, OrbitType.IGSO),
-    BDSSatellite(40, OrbitType.IGSO),
-    BDSSatellite(41, OrbitType.MEO),
-    BDSSatellite(42, OrbitType.MEO),
-    BDSSatellite(43, OrbitType.MEO),
-    BDSSatellite(44, OrbitType.MEO),
-    BDSSatellite(45, OrbitType.MEO),
-    BDSSatellite(46, OrbitType.MEO),
-    BDSSatellite(56, OrbitType.IGSO),
-    BDSSatellite(57, OrbitType.MEO),
-    BDSSatellite(58, OrbitType.MEO),
-    BDSSatellite(59, OrbitType.GEO),
-    BDSSatellite(60, OrbitType.GEO),
-    BDSSatellite(61, OrbitType.GEO),
-    BDSSatellite(62, OrbitType.GEO),
-    BDSSatellite(48, OrbitType.MEO),
-    BDSSatellite(50, OrbitType.MEO),
-    BDSSatellite(47, OrbitType.MEO),
-    BDSSatellite(49, OrbitType.MEO),
-//    BDSSatellite(130, OrbitType.GEO),
-//    BDSSatellite(143, OrbitType.GEO),
-//    BDSSatellite(144, OrbitType.GEO),
-)
+// 多星座卫星列表 - 包含 GPS、GLONASS、Galileo 和北斗
+private val satelliteList by lazy { listOf(
+    // GPS 卫星 (PRN 1-32)
+    gps(1), gps(2), gps(3), gps(5), gps(6), gps(7), gps(8), gps(9),
+    gps(10), gps(11), gps(12), gps(13), gps(14), gps(15), gps(16), gps(17),
+    gps(18), gps(19), gps(20), gps(21), gps(22), gps(23), gps(24), gps(25),
+    gps(26), gps(27), gps(28), gps(29), gps(30), gps(31), gps(32),
+
+    // GLONASS 卫星 (PRN 1-24)
+    glonass(1), glonass(2), glonass(3), glonass(4), glonass(5), glonass(6),
+    glonass(7), glonass(8), glonass(9), glonass(10), glonass(11), glonass(12),
+    glonass(13), glonass(14), glonass(15), glonass(16), glonass(17), glonass(18),
+    glonass(19), glonass(20), glonass(21), glonass(22), glonass(23), glonass(24),
+
+    // Galileo 卫星 (PRN 1-36)
+    galileo(1), galileo(2), galileo(3), galileo(4), galileo(5), galileo(7),
+    galileo(8), galileo(9), galileo(11), galileo(12), galileo(13), galileo(14),
+    galileo(15), galileo(18), galileo(19), galileo(21), galileo(22), galileo(24),
+    galileo(25), galileo(26), galileo(27), galileo(30), galileo(31), galileo(33),
+
+    // 北斗卫星
+    bds(1, OrbitType.GEO), bds(2, OrbitType.GEO), bds(3, OrbitType.GEO),
+    bds(4, OrbitType.GEO), bds(5, OrbitType.GEO), bds(6, OrbitType.IGSO),
+    bds(7, OrbitType.IGSO), bds(8, OrbitType.IGSO), bds(9, OrbitType.IGSO),
+    bds(10, OrbitType.IGSO), bds(11, OrbitType.MEO), bds(12, OrbitType.MEO),
+    bds(13, OrbitType.IGSO), bds(14, OrbitType.MEO), bds(19, OrbitType.MEO),
+    bds(20, OrbitType.MEO), bds(21, OrbitType.MEO), bds(22, OrbitType.MEO),
+    bds(23, OrbitType.MEO), bds(24, OrbitType.MEO), bds(25, OrbitType.MEO),
+    bds(26, OrbitType.MEO), bds(27, OrbitType.MEO), bds(28, OrbitType.MEO),
+    bds(29, OrbitType.MEO), bds(30, OrbitType.MEO)
+) }
 
 object GnssFlags {
     // 基本标志位
@@ -140,9 +125,39 @@ sealed class OrbitType(val minCn0: Float, val maxCn0: Float, val elevationRange:
     object MEO : OrbitType(MEO_MIN_CN0, MEO_MAX_CN0, 0f..90f)
 }
 
-data class BDSSatellite(
+// 通用卫星数据结构，支持多星座
+data class GnssSatellite(
     val prn: Int,
     val type: OrbitType,
+    val constellation: Int, // GnssFlags.CONSTELLATION_*
+    val frequencies: List<Float> // 可用频率列表
+)
+
+// 保持向后兼容的别名
+typealias BDSSatellite = GnssSatellite
+
+// 创建北斗卫星的辅助函数
+private fun bds(prn: Int, type: OrbitType) = GnssSatellite(
+    prn, type, GnssFlags.CONSTELLATION_BEIDOU,
+    listOf(BDS_B1I_FREQ, BDS_B2I_FREQ, BDS_B3I_FREQ)
+)
+
+// 创建 GPS 卫星的辅助函数
+private fun gps(prn: Int) = GnssSatellite(
+    prn, OrbitType.MEO, GnssFlags.CONSTELLATION_GPS,
+    listOf(GPS_L1_FREQ, GPS_L2_FREQ, GPS_L5_FREQ)
+)
+
+// 创建 GLONASS 卫星的辅助函数
+private fun glonass(prn: Int) = GnssSatellite(
+    prn, OrbitType.MEO, GnssFlags.CONSTELLATION_GLONASS,
+    listOf(GLONASS_G1_FREQ, GLONASS_G2_FREQ)
+)
+
+// 创建 Galileo 卫星的辅助函数
+private fun galileo(prn: Int) = GnssSatellite(
+    prn, OrbitType.MEO, GnssFlags.CONSTELLATION_GALILEO,
+    listOf(GALILEO_E1_FREQ, GALILEO_E5A_FREQ)
 )
 
 data class MockGnssData(
@@ -200,9 +215,12 @@ internal object LocationServiceHook: BaseLocationHook() {
                 // Virtual Coordinate: Instantly update the latest virtual coordinates
                 // Roulette Move: Each request moves a certain distance
                 // Route Simulation: Move according to a preset route
-                //val uid = FqlUtils.getCallerUid()
+
                 // Determine whether it is an app that needs a hook
                 if (!FakeLoc.enable) return@afterHook
+
+                // 检查是否是目标应用
+                if (!BinderUtils.isTargetApp()) return@afterHook
 
                 // It can't be null, because I'm judging in the previous step
                 val location = result as? Location ?: Location("gps")
@@ -511,9 +529,9 @@ internal object LocationServiceHook: BaseLocationHook() {
                                 if (hasCarrierFreq) flags = flags or GnssFlags.SVID_FLAGS_HAS_CARRIER_FREQUENCY
                                 if (hasBasebandCn0) flags = flags or GnssFlags.SVID_FLAGS_HAS_BASEBAND_CN0
 
-                                // 组合SVID、星座类型和标志位
+                                // 组合SVID、星座类型和标志位 - 现在使用卫星自己的星座类型
                                 svidWithFlags[index] = (sat.prn shl GnssFlags.SVID_SHIFT_WIDTH) or
-                                        ((GnssFlags.CONSTELLATION_BEIDOU and GnssFlags.CONSTELLATION_TYPE_MASK) shl GnssFlags.CONSTELLATION_TYPE_SHIFT_WIDTH) or
+                                        ((sat.constellation and GnssFlags.CONSTELLATION_TYPE_MASK) shl GnssFlags.CONSTELLATION_TYPE_SHIFT_WIDTH) or
                                         flags
 
                                 cn0s[index] = when (sat.type) {
@@ -523,11 +541,8 @@ internal object LocationServiceHook: BaseLocationHook() {
                                 }
                                 elevations[index] = Random.nextFloat(sat.type.elevationRange.start, sat.type.elevationRange.endInclusive)
                                 azimuths[index] = Random.nextFloat(0f, 360f)
-                                carrierFreqs[index] = when (Random.nextInt(3)) {
-                                    0 -> BDS_B1I_FREQ
-                                    1 -> BDS_B2I_FREQ
-                                    else -> BDS_B3I_FREQ
-                                }
+                                // 使用卫星自己的频率列表
+                                carrierFreqs[index] = sat.frequencies.random()
                             }
                         }
 
@@ -740,7 +755,8 @@ internal object LocationServiceHook: BaseLocationHook() {
             }
 
             // Not the provider of the portal, does not process
-            if (provider != "portal") {
+            // 使用 "passive" 作为隐蔽的 provider 名称
+            if (provider != "passive") {
                 if (FakeLoc.enableDebugLog)
                     Logger.debug("sendExtraCommand provider: $provider, command: $command, result: $result")
                 return@beforeHook
@@ -762,11 +778,11 @@ internal object LocationServiceHook: BaseLocationHook() {
                         if (param == null || param.args.size < 2 || param.args[0] == null) return
                         val provider = param.args[0] as String
                         var userId = param.args[1] as Int
-                        if (provider == "portal") {
-                            if (userId == 0) {
-                                userId = BinderUtils.getCallerUid()
-                            }
-                            param.result = BinderUtils.isLocationProviderEnabled(userId)
+                        // "passive" provider 用于 IPC 通信验证
+                        if (provider == "passive" && BinderUtils.isLocationProviderEnabled(
+                                if (userId == 0) BinderUtils.getCallerUid() else userId
+                            )) {
+                            param.result = true
                         } else if(provider == "network") {
                             param.result = !FakeLoc.enable
                         } else if (FakeLoc.disableFusedLocation && provider == "fused") {
@@ -789,7 +805,7 @@ internal object LocationServiceHook: BaseLocationHook() {
                         if (param == null || param.args.isEmpty() || param.args[0] == null) return
                         val provider = param.args[0] as String
                         val userId = BinderUtils.getCallerUid()
-                        if (provider == "portal" && BinderUtils.isLocationProviderEnabled(userId)) {
+                        if (provider == "passive" && BinderUtils.isLocationProviderEnabled(userId)) {
                             param.result = true
                         } else if(provider == "network") {
                             param.result = !FakeLoc.enable

@@ -68,11 +68,6 @@ object FakeLoc {
     var enableNMEA = false
 
     /**
-     * 是否隐藏模拟位置
-     */
-    var hideMock = true
-
-    /**
      * may cause system to crash
      */
     var hookWifi = true
@@ -82,6 +77,18 @@ object FakeLoc {
      */
     var needDowngradeToCdma = true
     var isSystemServerProcess = false
+
+    /**
+     * 目标应用 UID 集合 - 只对这些应用返回伪造位置
+     * 如果为空则对所有非系统应用生效
+     */
+    val targetUids = mutableSetOf<Int>()
+
+    /**
+     * 是否启用精确 UID 过滤模式
+     */
+    @Volatile
+    var enableUidFilter = false
 
     /**
      * 模拟最小卫星数量
@@ -107,17 +114,23 @@ object FakeLoc {
 
     @Volatile var hasBearings = false
 
-    var bearing = 0.0
-        get() {
+    @Volatile
+    private var _bearing = 0.0
+
+    var bearing: Double
+        get() = synchronized(this) {
             if (hasBearings) {
-                return field
+                _bearing
             } else {
-                if (field >= 360.0) {
-                    field -= 360.0
+                if (_bearing >= 360.0) {
+                    _bearing -= 360.0
                 }
-                field += 0.5
-                return field
+                _bearing += 0.5
+                _bearing
             }
+        }
+        set(value) = synchronized(this) {
+            _bearing = value
         }
 
     var accuracy = 25.0f

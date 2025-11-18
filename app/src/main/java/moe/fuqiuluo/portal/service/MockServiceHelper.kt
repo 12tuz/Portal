@@ -26,7 +26,8 @@ import moe.fuqiuluo.xposed.utils.FakeLoc
 import java.io.File
 
 object MockServiceHelper {
-    const val PROVIDER_NAME = "portal"
+    // 使用更隐蔽的 provider 名称，模拟系统服务
+    const val PROVIDER_NAME = "passive"
     private lateinit var randomKey: String
 
     private var loopThread :Thread ?= null

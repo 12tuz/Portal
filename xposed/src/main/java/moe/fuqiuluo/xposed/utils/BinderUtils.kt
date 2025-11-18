@@ -88,4 +88,60 @@ object BinderUtils {
         }
         return true
     }
+
+    /**
+     * 检查调用者是否是目标应用
+     * 如果启用 UID 过滤且目标列表不为空，只对目标应用返回 true
+     * 否则对所有非系统应用返回 true
+     */
+    fun isTargetApp(uid: Int = getCallerUid()): Boolean {
+        // 系统应用始终跳过
+        if (isSystemAppsCall(uid)) {
+            return false
+        }
+
+        // 如果启用精确过滤且目标列表不为空
+        if (FakeLoc.enableUidFilter && FakeLoc.targetUids.isNotEmpty()) {
+            return FakeLoc.targetUids.contains(uid)
+        }
+
+        // 未启用精确过滤时，对所有非系统应用生效
+        return true
+    }
+
+    /**
+     * 添加目标应用 UID
+     */
+    fun addTargetUid(uid: Int) {
+        FakeLoc.targetUids.add(uid)
+    }
+
+    /**
+     * 移除目标应用 UID
+     */
+    fun removeTargetUid(uid: Int) {
+        FakeLoc.targetUids.remove(uid)
+    }
+
+    /**
+     * 清空目标应用列表
+     */
+    fun clearTargetUids() {
+        FakeLoc.targetUids.clear()
+    }
+
+    /**
+     * 根据包名添加目标应用
+     */
+    fun addTargetPackage(context: Context = getSystemContext()!!, packageName: String): Boolean {
+        return try {
+            val packageInfo = context.packageManager.getPackageInfo(packageName, 0)
+            val uid = packageInfo.applicationInfo.uid
+            addTargetUid(uid)
+            true
+        } catch (e: Exception) {
+            Logger.error("Failed to add target package: $packageName", e)
+            false
+        }
+    }
 }

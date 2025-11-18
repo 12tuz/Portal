@@ -15,7 +15,8 @@ import kotlin.random.Random
 object RemoteCommandHandler {
     private val proxyBinders by lazy { Collections.synchronizedList(arrayListOf<IBinder>()) }
     private val needProxyCmd = arrayOf("start", "stop", "set_speed_amp", "set_altitude", "set_speed", "update_location", "set_bearing", "move", "put_config")
-    internal val randomKey by lazy { "portal_" + Random.nextDouble() }
+    // 使用更隐蔽的随机 key，避免包含 "portal" 字样
+    internal val randomKey by lazy { "sys_" + java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 16) }
     private var isLoadedLibrary = false
 
     @SuppressLint("UnsafeDynamicallyLoadedCode")
@@ -262,13 +263,46 @@ object RemoteCommandHandler {
                 rely.putBoolean("disable_fused_location", FakeLoc.disableFusedLocation)
                 rely.putBoolean("enable_agps", FakeLoc.enableAGPS)
                 rely.putBoolean("enable_nmea", FakeLoc.enableNMEA)
-                rely.putBoolean("hide_mock", FakeLoc.hideMock)
                 rely.putBoolean("hook_wifi", FakeLoc.hookWifi)
                 rely.putBoolean("need_downgrade_to_2g", FakeLoc.needDowngradeToCdma)
                 return true
             }
             "broadcast_location" -> {
                 LocationServiceHook.callOnLocationChanged()
+                return true
+            }
+            // 目标应用 UID 过滤管理命令
+            "add_target_uid" -> {
+                val uid = rely.getInt("uid", -1)
+                if (uid > 0) {
+                    BinderUtils.addTargetUid(uid)
+                    return true
+                }
+                return false
+            }
+            "remove_target_uid" -> {
+                val uid = rely.getInt("uid", -1)
+                if (uid > 0) {
+                    BinderUtils.removeTargetUid(uid)
+                    return true
+                }
+                return false
+            }
+            "clear_target_uids" -> {
+                BinderUtils.clearTargetUids()
+                return true
+            }
+            "add_target_package" -> {
+                val packageName = rely.getString("package_name") ?: return false
+                return BinderUtils.addTargetPackage(packageName = packageName)
+            }
+            "set_uid_filter" -> {
+                FakeLoc.enableUidFilter = rely.getBoolean("enable", false)
+                return true
+            }
+            "get_target_uids" -> {
+                rely.putIntArray("uids", FakeLoc.targetUids.toIntArray())
+                rely.putBoolean("filter_enabled", FakeLoc.enableUidFilter)
                 return true
             }
             "load_library" -> {

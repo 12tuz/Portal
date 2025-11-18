@@ -83,16 +83,21 @@ abstract class BaseLocationHook: BaseDivineService() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             location.verticalAccuracyMeters = originLocation.verticalAccuracyMeters
         }
-        originLocation.extras?.let {
-            location.extras = it
+        // 复制原始 extras，但移除可能暴露的标记
+        val cleanExtras = Bundle()
+        originLocation.extras?.let { original ->
+            // 只复制标准的 GNSS extras
+            if (original.containsKey("satellites")) {
+                cleanExtras.putInt("satellites", Random.nextInt(FakeLoc.minSatellites, FakeLoc.minSatellites + 10))
+            }
+            if (original.containsKey("maxCn0")) {
+                cleanExtras.putInt("maxCn0", Random.nextInt(35, 50))
+            }
+            if (original.containsKey("meanCn0")) {
+                cleanExtras.putInt("meanCn0", Random.nextInt(25, 35))
+            }
         }
-        if (location.extras == null) {
-            location.extras = Bundle()
-        }
-        location.extras?.putDouble("latlon", location.latitude + location.longitude)
-        location.extras?.putInt("satellites", Random.nextInt(8, 45))
-        location.extras?.putInt("maxCn0", Random.nextInt(30, 50))
-        location.extras?.putInt("meanCn0", Random.nextInt(20, 30))
+        location.extras = cleanExtras
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             if (originLocation.hasMslAltitude()) {
@@ -102,16 +107,9 @@ abstract class BaseLocationHook: BaseDivineService() {
                 location.mslAltitudeAccuracyMeters = FakeLoc.altitude.toFloat()
             }
         }
-        if (FakeLoc.hideMock) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                location.isMock = false
-            }
-        } else {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                location.isMock = true
-            }
-            location.extras?.putBoolean("portal.enable", true)
-            location.extras?.putBoolean("is_mock", true)
+        // 始终隐藏 mock 标志以增强隐蔽性
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            location.isMock = false
         }
 
         kotlin.runCatching {
@@ -189,10 +187,61 @@ abstract class BaseLocationHook: BaseDivineService() {
                     return value.toNmeaString()
                 }
                 is NmeaValue.GSA -> {
-                    return null
+                    // 伪造 GSA - 3D Fix 状态
+                    // 生成用于定位的卫星 PRN 列表 (最多12颗)
+                    val usedPrns = mutableListOf<Int?>()
+                    val satCount = kotlin.math.min(12, FakeLoc.minSatellites)
+                    for (i in 1..satCount) {
+                        usedPrns.add(i + 160) // 北斗卫星 PRN 从 161 开始
+                    }
+                    // 填充到12个
+                    while (usedPrns.size < 12) {
+                        usedPrns.add(null)
+                    }
+
+                    val forgedGsa = NmeaValue.GSA(
+                        mode = "A", // 自动模式
+                        fixStatus = 3, // 3D fix
+                        prn = usedPrns,
+                        pdop = 1.2 + kotlin.random.Random.nextDouble(0.0, 0.5),
+                        hdop = 0.8 + kotlin.random.Random.nextDouble(0.0, 0.3),
+                        vdop = 1.0 + kotlin.random.Random.nextDouble(0.0, 0.4),
+                        systemId = "4" // 北斗系统
+                    )
+                    return forgedGsa.toNmeaString()
                 }
                 is NmeaValue.GSV -> {
-                    return null
+                    // 伪造 GSV - 卫星视图数据
+                    val totalSats = kotlin.math.min(FakeLoc.minSatellites, 16)
+                    val satsPerMessage = 4
+                    val totalMessages = (totalSats + satsPerMessage - 1) / satsPerMessage
+
+                    // 确定当前是第几条消息
+                    val currentMsg = value.messageNumber
+                    if (currentMsg > totalMessages) {
+                        return null
+                    }
+
+                    val satellites = mutableListOf<NmeaValue.GSV.Satellite>()
+                    val startIdx = (currentMsg - 1) * satsPerMessage
+                    val endIdx = kotlin.math.min(startIdx + satsPerMessage, totalSats)
+
+                    for (i in startIdx until endIdx) {
+                        val prn = i + 1 + 160 // 北斗 PRN
+                        val elevation = kotlin.random.Random.nextInt(10, 80)
+                        val azimuth = kotlin.random.Random.nextInt(0, 360)
+                        val snr = kotlin.random.Random.nextInt(25, 50)
+                        satellites.add(NmeaValue.GSV.Satellite(prn, elevation, azimuth, snr))
+                    }
+
+                    val forgedGsv = NmeaValue.GSV(
+                        totalMessages = totalMessages,
+                        messageNumber = currentMsg,
+                        totalSatellitesInView = totalSats,
+                        satellites = satellites,
+                        infoId = "4" // 北斗系统
+                    )
+                    return forgedGsv.toNmeaString()
                 }
                 is NmeaValue.RMC -> {
                     if (value.latitude == null || value.longitude == null) {
