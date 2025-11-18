@@ -1,0 +1,37 @@
+{
+  "version": 3,
+  "artifactType": {
+    "type": "APK",
+    "kind": "Directory"
+  },
+  "applicationId": "moe.fuqiuluo.portal",
+  "variantName": "arm64Release",
+  "elements": [
+    {
+      "type": "SINGLE",
+      "filters": [],
+      "attributes": [],
+      "versionCode": 1763460838,
+      "versionName": "1.0.4.r128.f1fc4dc",
+      "outputFile": "Portal-v1.0.4.r128.f1fc4dc-arm64.apk"
+    }
+  ],
+  "elementType": "File",
+  "baselineProfiles": [
+    {
+      "minApi": 28,
+      "maxApi": 30,
+      "baselineProfiles": [
+        "baselineProfiles/1/Portal-v1.0.4.r128.f1fc4dc-arm64.dm"
+      ]
+    },
+    {
+      "minApi": 31,
+      "maxApi": 2147483647,
+      "baselineProfiles": [
+        "baselineProfiles/0/Portal-v1.0.4.r128.f1fc4dc-arm64.dm"
+      ]
+    }
+  ],
+  "minSdkVersionForDexing": 26
+}

@@ -1,7 +1,6 @@
 package moe.fuqiuluo.xposed.hooks.gms
 
 import android.location.Location
-import android.location.LocationManager
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers

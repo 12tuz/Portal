@@ -136,7 +136,7 @@ object BinderUtils {
     fun addTargetPackage(context: Context = getSystemContext()!!, packageName: String): Boolean {
         return try {
             val packageInfo = context.packageManager.getPackageInfo(packageName, 0)
-            val uid = packageInfo.applicationInfo.uid
+            val uid = packageInfo.applicationInfo!!.uid
             addTargetUid(uid)
             true
         } catch (e: Exception) {

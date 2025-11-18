@@ -48,6 +48,8 @@ class FakeLocation: IXposedHookLoadPackage, IXposedHookZygoteInit {
      * @throws Throwable Everything the callback throws is caught and logged.
      */
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam?) {
+        lpparam ?: return
+
         val targetPackages = setOf(
             "android",
             "com.android.phone",
@@ -57,7 +59,7 @@ class FakeLocation: IXposedHookLoadPackage, IXposedHookZygoteInit {
             "com.google.android.gms" // Google Play Services
         )
 
-        if (lpparam?.packageName !in targetPackages) {
+        if (lpparam.packageName !in targetPackages) {
             return
         }
 
