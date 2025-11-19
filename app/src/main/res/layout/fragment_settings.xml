@@ -506,6 +506,236 @@
                     android:layout_gravity="center_vertical"
                     app:useMaterialThemeColors="true"/>
             </LinearLayout>
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/transport_mode_layout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:padding="5dp"
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="4dp">
+
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/transport_mode_title"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="交通模式"
+                    android:textColor="@color/portal_mini_title_color"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"/>
+
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/transport_mode_desc"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="选择当前交通方式"
+                    android:textSize="11sp"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/transport_mode_title"/>
+
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/transport_mode_value"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="步行"
+                    android:textSize="11sp"
+                    app:layout_constraintTop_toBottomOf="@id/transport_mode_title"
+                    app:layout_constraintEnd_toEndOf="parent" />
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <LinearLayout
+                android:id="@+id/auto_detect_mode_layout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:padding="5dp"
+                android:orientation="horizontal">
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:gravity="center_vertical">
+                    <com.google.android.material.textview.MaterialTextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="自动检测交通模式"
+                        android:textColor="@color/portal_mini_title_color" />
+                    <com.google.android.material.textview.MaterialTextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="根据速度自动切换交通方式"
+                        android:textSize="11sp" />
+                </LinearLayout>
+                <com.google.android.material.switchmaterial.SwitchMaterial
+                    android:id="@+id/auto_detect_mode_switch"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_vertical"
+                    app:useMaterialThemeColors="true"/>
+            </LinearLayout>
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/step_frequency_multiplier_layout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:padding="5dp"
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="4dp">
+
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/step_frequency_multiplier_title"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="步频倍率"
+                    android:textColor="@color/portal_mini_title_color"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"/>
+
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/step_frequency_multiplier_desc"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="调节步行/跑步速度 (0.5x-2.0x)"
+                    android:textSize="11sp"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/step_frequency_multiplier_title"/>
+
+                <com.google.android.material.textview.MaterialTextView
+                    android:id="@+id/step_frequency_multiplier_value"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="1.0x"
+                    android:textSize="11sp"
+                    app:layout_constraintTop_toBottomOf="@id/step_frequency_multiplier_title"
+                    app:layout_constraintEnd_toEndOf="parent" />
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <!-- 步频/传感器模拟开关 -->
+            <LinearLayout
+                android:id="@+id/sensor_simulation_layout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:padding="5dp"
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="4dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <com.google.android.material.textview.MaterialTextView
+                        android:id="@+id/sensor_simulation_title"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="步频模拟"
+                        android:textColor="@color/portal_mini_title_color"/>
+
+                    <com.google.android.material.textview.MaterialTextView
+                        android:id="@+id/sensor_simulation_desc"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="模拟加速度计、陀螺仪等传感器"
+                        android:textSize="11sp"/>
+                </LinearLayout>
+
+                <com.google.android.material.switchmaterial.SwitchMaterial
+                    android:id="@+id/sensor_simulation_switch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_vertical"
+                    app:useMaterialThemeColors="true"/>
+            </LinearLayout>
+
+            <!-- Geocoder禁用开关 -->
+            <LinearLayout
+                android:id="@+id/disable_geocoder_layout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:padding="5dp"
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="4dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <com.google.android.material.textview.MaterialTextView
+                        android:id="@+id/disable_geocoder_title"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="禁用反向地理编码"
+                        android:textColor="@color/portal_mini_title_color"/>
+
+                    <com.google.android.material.textview.MaterialTextView
+                        android:id="@+id/disable_geocoder_desc"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="阻止应用通过坐标反查地址"
+                        android:textSize="11sp"/>
+                </LinearLayout>
+
+                <com.google.android.material.switchmaterial.SwitchMaterial
+                    android:id="@+id/disable_geocoder_switch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_vertical"
+                    app:useMaterialThemeColors="true"/>
+            </LinearLayout>
+
+            <!-- Geofencing开关 -->
+            <LinearLayout
+                android:id="@+id/enable_geofence_layout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:padding="5dp"
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="4dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <com.google.android.material.textview.MaterialTextView
+                        android:id="@+id/enable_geofence_title"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="启用地理栅栏"
+                        android:textColor="@color/portal_mini_title_color"/>
+
+                    <com.google.android.material.textview.MaterialTextView
+                        android:id="@+id/enable_geofence_desc"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="伪造地理栅栏坐标（关闭则禁用栅栏）"
+                        android:textSize="11sp"/>
+                </LinearLayout>
+
+                <com.google.android.material.switchmaterial.SwitchMaterial
+                    android:id="@+id/enable_geofence_switch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_vertical"
+                    app:useMaterialThemeColors="true"/>
+            </LinearLayout>
+
         </LinearLayout>
 
     </ScrollView>

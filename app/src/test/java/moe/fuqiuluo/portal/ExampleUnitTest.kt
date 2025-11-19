@@ -1,4 +1,4 @@
-package moe.fuqiuluo.portal
+package john.fucklocation.portal
 
 import org.junit.Test
 

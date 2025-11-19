@@ -8,11 +8,11 @@ plugins {
 }
 
 android {
-    namespace = "moe.fuqiuluo.portal"
+    namespace = "john.fucklocation.portal"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "moe.fuqiuluo.portal"
+        applicationId = "john.fucklocation.portal"
         minSdk = 26
         targetSdk = 35
         versionCode = getVersionCode()
@@ -262,4 +262,3 @@ fun getVersionCode(): Int {
 fun getVersionName(): String {
     return getGitCommitHash()
 }
-

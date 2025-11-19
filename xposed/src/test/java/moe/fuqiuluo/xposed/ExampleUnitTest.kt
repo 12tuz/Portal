@@ -1,4 +1,4 @@
-package moe.fuqiuluo.xposed
+package john.fucklocation.xposed
 
 import org.junit.Test
 

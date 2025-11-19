@@ -21,6 +21,6 @@ JNI_OnLoad(JavaVM* vm, void* reserved) {
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_moe_fuqiuluo_dobby_Dobby_setStatus(JNIEnv *env, jobject thiz, jboolean status) {
+Java_john_fucklocation_dobby_Dobby_setStatus(JNIEnv *env, jobject thiz, jboolean status) {
     enableSensorHook = status;
 }

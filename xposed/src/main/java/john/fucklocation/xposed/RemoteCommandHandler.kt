@@ -1,0 +1,455 @@
+package john.fucklocation.xposed
+
+import android.annotation.SuppressLint
+import android.os.Bundle
+import android.os.IBinder
+import android.os.Parcel
+import john.fucklocation.dobby.Dobby
+import john.fucklocation.xposed.hooks.LocationServiceHook
+import john.fucklocation.xposed.utils.FakeLoc
+import john.fucklocation.xposed.utils.BinderUtils
+import john.fucklocation.xposed.utils.Logger
+import john.fucklocation.xposed.utils.LocationModeManager
+import java.util.Collections
+import kotlin.random.Random
+
+object RemoteCommandHandler {
+    private val proxyBinders by lazy { Collections.synchronizedList(arrayListOf<IBinder>()) }
+    private val needProxyCmd = arrayOf("start", "stop", "set_speed_amp", "set_altitude", "set_speed", "update_location", "set_bearing", "move", "put_config", "set_transport_mode", "set_step_frequency_multiplier", "set_auto_detect_transport_mode", "set_sensor_simulation", "set_disable_get_from_location", "set_enable_request_geofence", "enable_route_mode", "disable_route_mode")
+    // 使用更隐蔽的随机 key，避免包含 "portal" 字样
+    internal val randomKey by lazy { "sys_" + java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 16) }
+    private var isLoadedLibrary = false
+
+    @SuppressLint("UnsafeDynamicallyLoadedCode")
+    fun handleInstruction(command: String, rely: Bundle): Boolean {
+        // Exchange key -> returns a random key -> is used to verify that it is the PortalManager
+        if (command == "exchange_key") {
+            val userId = BinderUtils.getCallerUid()
+            if (BinderUtils.isLocationProviderEnabled(userId)) {
+                rely.putString("key", randomKey)
+                return true
+            }
+            // Go back and see if the instruction has been processed to prevent it from being detected by others
+        } else if (command != randomKey) {
+            return false
+        }
+        val commandId = rely.getString("command_id") ?: return false
+
+        kotlin.runCatching {
+            if (proxyBinders.isNotEmpty() && needProxyCmd.any { it == commandId }) {
+                proxyBinders.removeIf {
+                    if (it.isBinderAlive && it.pingBinder()) {
+                        val data = Parcel.obtain()
+                        data.writeBundle(rely)
+                        it.transact(1, data, null, 0)
+                        data.recycle()
+                        false
+                    } else true
+                }
+            }
+        }.onFailure {
+            Logger.error("Failed to transact with proxyBinder", it)
+        }
+
+        if (FakeLoc.enableDebugLog) {
+            Logger.debug("commandId=$commandId, rely=$rely")
+        }
+
+        when (commandId) {
+            "set_proxy" -> {
+                Logger.info("SubProxyBinder: ${rely.getBinder("proxy")} from ${BinderUtils.getUidPackageNames()}!")
+                rely.getBinder("proxy")?.let {
+                    proxyBinders.add(it)
+                }
+                return true
+            }
+            "start" -> {
+                val speed = rely.getDouble("speed", FakeLoc.speed)
+                val altitude = rely.getDouble("altitude", FakeLoc.altitude)
+                val accuracy = rely.getFloat("accuracy", FakeLoc.accuracy)
+
+                FakeLoc.enable = true
+                if (isLoadedLibrary) {
+                    Dobby.setStatus(true)
+                }
+
+                FakeLoc.speed = speed
+                FakeLoc.altitude = altitude
+                FakeLoc.accuracy = accuracy
+
+                return true
+            }
+            "stop" -> {
+                FakeLoc.enable = false
+                FakeLoc.hasBearings = false
+                // 停止模拟时清除所有模式
+                LocationModeManager.clearAll()
+                if (isLoadedLibrary) {
+                    Dobby.setStatus(false)
+                }
+                return true
+            }
+            "is_start" -> {
+                rely.putBoolean("is_start", FakeLoc.enable)
+                return true
+            }
+            "start_gnss_mock" -> {
+                FakeLoc.enableMockGnss = true
+                return true
+            }
+            "stop_gnss_mock" -> {
+                FakeLoc.enableMockGnss = false
+                return true
+            }
+            "is_gnss_start" -> {
+                rely.putBoolean("is_gnss_start", FakeLoc.enableMockGnss)
+                return true
+            }
+            "is_wifi_mock_start" -> {
+                rely.putBoolean("is_wifi_mock_start", FakeLoc.enableMockWifi)
+                return true
+            }
+            "start_wifi_mock" -> {
+                FakeLoc.enableMockWifi = true
+                return true
+            }
+            "stop_wifi_mock" -> {
+                FakeLoc.enableMockWifi = false
+                return true
+            }
+            "get_location" -> {
+                rely.putDouble("lat", FakeLoc.latitude)
+                rely.putDouble("lon", FakeLoc.longitude)
+                return true
+            }
+            "get_listener_size" -> {
+                rely.putInt("size", LocationServiceHook.locationListeners.size)
+                return true
+            }
+            "get_speed" -> {
+                rely.putDouble("speed", FakeLoc.speed)
+                return true
+            }
+            "get_bearing" -> {
+                rely.putDouble("bearing", FakeLoc.bearing)
+                return true
+            }
+            "get_altitude" -> {
+                rely.putDouble("altitude", FakeLoc.altitude)
+                return true
+            }
+            "set_speed_amp" -> {
+                val speedAmplitude = rely.getDouble("speed_amplitude", 1.0)
+                FakeLoc.speedAmplitude = speedAmplitude
+                return true
+            }
+            "set_altitude" -> {
+                val altitude = rely.getDouble("altitude", 0.0)
+                FakeLoc.altitude = altitude
+                return true
+            }
+            "set_speed" -> {
+                val speed = rely.getDouble("speed", 0.0)
+                FakeLoc.speed = speed
+                return true
+            }
+            "set_bearing" -> {
+                val bearing = rely.getDouble("bearing", 0.0)
+                FakeLoc.bearing = bearing
+                FakeLoc.hasBearings = true
+                return true
+            }
+            "move" -> {
+                val distance = rely.getDouble("n", 0.0)
+                if (distance == 0.0) return true
+                val bearing = rely.getDouble("bearing", 0.0)
+
+                // 获取当前位置（从LocationModeManager或FakeLoc）
+                val currentLoc = LocationModeManager.getCurrentLocation()
+                    ?: Pair(FakeLoc.latitude, FakeLoc.longitude)
+
+                // 基于当前位置计算新位置
+                val newLoc = FakeLoc.moveLocation(
+                    lat = currentLoc.first,
+                    lon = currentLoc.second,
+                    n = distance,
+                    angle = bearing
+                )
+                if (FakeLoc.enableDebugLog) {
+                    Logger.debug("move: distance=$distance, bearing=$bearing, newLoc=$newLoc")
+                }
+                FakeLoc.bearing = bearing
+                FakeLoc.hasBearings = true
+
+                // 根据当前模式更新位置
+                val result = when (LocationModeManager.getCurrentMode()) {
+                    LocationModeManager.LocationMode.ROUTE -> {
+                        // 路线模式：通过LocationModeManager更新（保持路线模式状态）
+                        LocationModeManager.updateLocation(newLoc.first, newLoc.second)
+                        true
+                    }
+                    else -> {
+                        // 单点模式或未启用：使用updateCoordinate（会设置为单点模式）
+                        updateCoordinate(newLoc.first, newLoc.second)
+                    }
+                }
+
+                if (result && FakeLoc.isSystemServerProcess) {
+                    LocationServiceHook.callOnLocationChanged()
+                }
+                return result
+            }
+            "update_location" -> {
+                val mode = rely.getString("mode")
+                var newLat = rely.getDouble("lat", 0.0)
+                var newLon = rely.getDouble("lon", 0.0)
+                when(mode) {
+                    "+" -> {
+                        newLat += FakeLoc.latitude
+                        newLon += FakeLoc.longitude
+                        return updateCoordinate(newLat, newLon)
+                    }
+                    "-" -> {
+                        newLat = FakeLoc.latitude - newLat
+                        newLon = FakeLoc.longitude - newLon
+                        return updateCoordinate(newLat, newLon)
+                    }
+                    "*" -> {
+                        newLat *= FakeLoc.latitude
+                        newLon *= FakeLoc.longitude
+                        return updateCoordinate(newLat, newLon)
+                    }
+                    "/" -> {
+                        if (newLat == 0.0 || newLon == 0.0) {
+                            return false
+                        }
+                        newLat /= FakeLoc.latitude
+                        newLon /= FakeLoc.longitude
+                        return updateCoordinate(newLat, newLon)
+                    }
+                    "=" -> {
+                        return updateCoordinate(newLat, newLon)
+                    }
+                    "random" -> {
+                        return updateCoordinate(Random.nextDouble(-90.0, 90.0), Random.nextDouble(-180.0, 180.0))
+                    }
+                }
+                return true
+            }
+            "put_config" -> {
+                val enable = rely.getBoolean("enable", FakeLoc.enable)
+                val speed = rely.getDouble("speed", FakeLoc.speed)
+                val altitude = rely.getDouble("altitude", FakeLoc.altitude)
+                val accuracy = rely.getFloat("accuracy", FakeLoc.accuracy)
+                val enableDebugLog = rely.getBoolean("enable_debug_log", FakeLoc.enableDebugLog)
+                val disableGetCurrentLocation = rely.getBoolean("disable_get_current_location", FakeLoc.disableGetCurrentLocation)
+                val disableRegisterLocationListener = rely.getBoolean("disable_register_location_listener", FakeLoc.disableRegisterLocationListener)
+                val disableFusedLocation = rely.getBoolean("disable_fused_location", FakeLoc.disableFusedLocation)
+                val needDowngradeToCdma = rely.getBoolean("need_downgrade_to_2g", FakeLoc.needDowngradeToCdma)
+                var minSatellites = rely.getInt("min_satellites", 12)
+                if (minSatellites < 0) {
+                    minSatellites = 12
+                }
+
+                val enableAGPS = rely.getBoolean("enable_agps", FakeLoc.enableAGPS)
+                val enableNMEA = rely.getBoolean("enable_nmea", FakeLoc.enableNMEA)
+                val disableRequestGeofence = rely.getBoolean("disable_request_geofence", FakeLoc.disableRequestGeofence)
+                val disableGetFromLocation = rely.getBoolean("disable_get_from_location", FakeLoc.disableGetFromLocation)
+
+                FakeLoc.enable = enable
+                FakeLoc.speed = speed
+                FakeLoc.altitude = altitude
+                FakeLoc.accuracy = accuracy
+                FakeLoc.enableDebugLog = enableDebugLog
+                FakeLoc.disableGetCurrentLocation = disableGetCurrentLocation
+                FakeLoc.disableRegisterLocationListener = disableRegisterLocationListener
+                FakeLoc.disableFusedLocation = disableFusedLocation
+                FakeLoc.needDowngradeToCdma = needDowngradeToCdma
+                FakeLoc.minSatellites = minSatellites
+                FakeLoc.enableAGPS = enableAGPS
+                FakeLoc.enableNMEA = enableNMEA
+                FakeLoc.disableRequestGeofence = disableRequestGeofence
+                FakeLoc.disableGetFromLocation = disableGetFromLocation
+                return true
+            }
+            "sync_config" -> {
+                rely.putBoolean("enable", FakeLoc.enable)
+                rely.putDouble("latitude", FakeLoc.latitude)
+                rely.putDouble("longitude", FakeLoc.longitude)
+                rely.putDouble("altitude", FakeLoc.altitude)
+                rely.putDouble("speed", FakeLoc.speed)
+                rely.putDouble("speed_amplitude", FakeLoc.speedAmplitude)
+                rely.putBoolean("has_bearings", FakeLoc.hasBearings)
+                rely.putDouble("bearing", FakeLoc.bearing)
+                rely.putParcelable("last_location", FakeLoc.lastLocation)
+                rely.putBoolean("enable_log", FakeLoc.enableLog)
+                rely.putBoolean("enable_debug_log", FakeLoc.enableDebugLog)
+                rely.putBoolean("disable_get_current_location", FakeLoc.disableGetCurrentLocation)
+                rely.putBoolean("disable_register_location_listener", FakeLoc.disableRegisterLocationListener)
+                rely.putBoolean("disable_fused_location", FakeLoc.disableFusedLocation)
+                rely.putBoolean("enable_agps", FakeLoc.enableAGPS)
+                rely.putBoolean("enable_nmea", FakeLoc.enableNMEA)
+                rely.putBoolean("hook_wifi", FakeLoc.hookWifi)
+                rely.putBoolean("need_downgrade_to_2g", FakeLoc.needDowngradeToCdma)
+                return true
+            }
+            "broadcast_location" -> {
+                LocationServiceHook.callOnLocationChanged()
+                return true
+            }
+            // 目标应用 UID 过滤管理命令
+            "add_target_uid" -> {
+                val uid = rely.getInt("uid", -1)
+                if (uid > 0) {
+                    BinderUtils.addTargetUid(uid)
+                    return true
+                }
+                return false
+            }
+            "remove_target_uid" -> {
+                val uid = rely.getInt("uid", -1)
+                if (uid > 0) {
+                    BinderUtils.removeTargetUid(uid)
+                    return true
+                }
+                return false
+            }
+            "clear_target_uids" -> {
+                BinderUtils.clearTargetUids()
+                return true
+            }
+            "add_target_package" -> {
+                val packageName = rely.getString("package_name") ?: return false
+                return BinderUtils.addTargetPackage(packageName = packageName)
+            }
+            "set_uid_filter" -> {
+                FakeLoc.enableUidFilter = rely.getBoolean("enable", false)
+                return true
+            }
+            "get_target_uids" -> {
+                rely.putIntArray("uids", FakeLoc.targetUids.toIntArray())
+                rely.putBoolean("filter_enabled", FakeLoc.enableUidFilter)
+                return true
+            }
+            "load_library" -> {
+                val path = rely.getString("path") ?: return false
+
+                if (isLoadedLibrary && path.endsWith("libportal.so")) {
+                    rely.putString("result", "success")
+                    return true
+                }
+                runCatching {
+                    System.load(path)
+                }.onSuccess {
+                    rely.putString("result", "success")
+                    isLoadedLibrary = true
+                }.onFailure {
+                    rely.putString("result", it.stackTraceToString())
+                }
+
+                if (isLoadedLibrary) {
+                    Dobby.setStatus(FakeLoc.enable)
+                }
+
+                return true
+            }
+            "set_transport_mode" -> {
+                val mode = rely.getInt("transport_mode", 1)
+                if (mode in 0..5) {
+                    FakeLoc.transportMode = FakeLoc.TransportMode.values()[mode]
+                    Logger.info("Transport mode set to: ${FakeLoc.transportMode}")
+                    return true
+                }
+                return false
+            }
+            "set_step_frequency_multiplier" -> {
+                val multiplier = rely.getDouble("step_frequency_multiplier", 1.0)
+                if (multiplier in 0.5..2.0) {
+                    FakeLoc.stepFrequencyMultiplier = multiplier
+                    Logger.info("Step frequency multiplier set to: $multiplier")
+                    return true
+                }
+                return false
+            }
+            "set_auto_detect_transport_mode" -> {
+                val autoDetect = rely.getBoolean("auto_detect_transport_mode", true)
+                FakeLoc.autoDetectTransportMode = autoDetect
+                Logger.info("Auto detect transport mode set to: $autoDetect")
+                return true
+            }
+            "set_sensor_simulation" -> {
+                val enable = rely.getBoolean("enable_sensor_simulation", true)
+                FakeLoc.enableSensorSimulation = enable
+                Logger.info("Sensor simulation set to: $enable")
+                return true
+            }
+            "set_disable_get_from_location" -> {
+                val disable = rely.getBoolean("disable_get_from_location", false)
+                FakeLoc.disableGetFromLocation = disable
+                Logger.info("Disable getFromLocation set to: $disable")
+                return true
+            }
+            "set_enable_request_geofence" -> {
+                val enable = rely.getBoolean("enable_request_geofence", true)
+                FakeLoc.disableRequestGeofence = !enable
+                Logger.info("Enable request geofence set to: $enable")
+                return true
+            }
+            "enable_route_mode" -> {
+                // 启用路线模拟模式
+                // UI层会定期调用get_location获取当前位置，这里只需设置模式标记
+                LocationModeManager.enableRoute {
+                    // 返回当前FakeLoc中的位置（UI层会通过move命令更新）
+                    Pair(FakeLoc.latitude, FakeLoc.longitude)
+                }
+                Logger.info("Route simulation mode enabled")
+                return true
+            }
+            "disable_route_mode" -> {
+                // 禁用路线模拟模式
+                LocationModeManager.disableRoute()
+                Logger.info("Route simulation mode disabled")
+                return true
+            }
+            "get_location_mode" -> {
+                // 获取当前位置模式
+                val mode = LocationModeManager.getCurrentMode()
+                rely.putInt("mode", mode.ordinal)
+                rely.putString("mode_name", mode.name)
+                return true
+            }
+            else -> return false
+        }
+    }
+
+//    private var hasHookSensor = false
+//
+//    private fun tryHookSensor(classLoader: ClassLoader = FakeLoc::class.java.classLoader!!) {
+//        if (hasHookSensor || proxyBinders.isNullOrEmpty()) return
+//
+//
+//
+//        hasHookSensor = true
+//    }
+
+//    private fun generateLocation(): Location {
+//        val (location, realLocation) = if (FakeLocationConfig.lastLocation != null) {
+//            (FakeLocationConfig.lastLocation!! to true)
+//        } else {
+//            (Location(LocationManager.GPS_PROVIDER) to false)
+//        }
+//
+//        return LocationServiceProxyHook.injectLocation(location, realLocation)
+//    }
+
+    private fun updateCoordinate(newLat: Double, newLon: Double): Boolean {
+        if (newLat in -90.0..90.0 && newLon in -180.0..180.0) {
+            // 使用LocationModeManager统一管理单点模拟
+            LocationModeManager.enableSinglePoint(newLat, newLon)
+            return true
+        } else {
+            Logger.error("Invalid latitude or longitude: $newLat, $newLon")
+            return false
+        }
+    }
+}

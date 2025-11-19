@@ -1,4 +1,4 @@
-package moe.fuqiuluo.xposed
+package john.fucklocation.xposed
 
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -19,6 +19,6 @@ class ExampleInstrumentedTest {
     fun useAppContext() {
         // Context of the app under test.
         val appContext = InstrumentationRegistry.getInstrumentation().targetContext
-        assertEquals("moe.fuqiuluo.xposed.test", appContext.packageName)
+        assertEquals("john.fucklocation.xposed.test", appContext.packageName)
     }
 }

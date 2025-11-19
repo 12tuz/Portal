@@ -4,16 +4,16 @@
     "type": "APK",
     "kind": "Directory"
   },
-  "applicationId": "moe.fuqiuluo.portal",
+  "applicationId": "john.fucklocation.portal",
   "variantName": "arm64Release",
   "elements": [
     {
       "type": "SINGLE",
       "filters": [],
       "attributes": [],
-      "versionCode": 1763460838,
-      "versionName": "1.0.4.r128.f1fc4dc",
-      "outputFile": "Portal-v1.0.4.r128.f1fc4dc-arm64.apk"
+      "versionCode": 1763535902,
+      "versionName": "1.0.4.r129.e9edf74",
+      "outputFile": "Portal-v1.0.4.r129.e9edf74-arm64.apk"
     }
   ],
   "elementType": "File",
@@ -22,14 +22,14 @@
       "minApi": 28,
       "maxApi": 30,
       "baselineProfiles": [
-        "baselineProfiles/1/Portal-v1.0.4.r128.f1fc4dc-arm64.dm"
+        "baselineProfiles/1/Portal-v1.0.4.r129.e9edf74-arm64.dm"
       ]
     },
     {
       "minApi": 31,
       "maxApi": 2147483647,
       "baselineProfiles": [
-        "baselineProfiles/0/Portal-v1.0.4.r128.f1fc4dc-arm64.dm"
+        "baselineProfiles/0/Portal-v1.0.4.r129.e9edf74-arm64.dm"
       ]
     }
   ],

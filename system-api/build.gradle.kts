@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "moe.fuqiuluo.hardcoder"
+    namespace = "john.fucklocation.hardcoder"
     compileSdk = 35
 
     defaultConfig {

@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "moe.fuqiuluo.xposed"
+    namespace = "john.fucklocation.xposed"
     compileSdk = 35
     ndkVersion = "26.1.10909125"
 
@@ -54,6 +54,7 @@ dependencies {
     compileOnly(libs.xposed.api)
     compileOnly(project(":system-api"))
     implementation(project(":nmea"))
+    implementation("androidx.annotation:annotation:1.7.1")
 
     // Just Test?
     //noinspection GradleDynamicVersion
